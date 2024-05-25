@@ -34,7 +34,7 @@ loop() ->
     end.
 
 start_monitor(Server) ->
-    spawn(fun() -> monitor_loop(Server) end).
+    spawn(fun() -> monitor_loop(Server) end). %starts server monitor
 
 monitor_loop(Server) ->
     Pid = whereis(Server),
@@ -43,7 +43,7 @@ monitor_loop(Server) ->
         {'DOWN', Ref, process, Pid, Reason} ->
             io:format("Server ~p is down: ~p~n", [Server, Reason]),
             Router = list_to_atom("router@" ++ get_host_name()),
-            erpc:call(Router, router, server_down, [Pid]),
+            erpc:call(Router, router, server_down, [Pid]), %removes the server from the router list since it doesn't exist anymore
             restart(Server),
             monitor_loop(Server)
     end.
