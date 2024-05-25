@@ -1,12 +1,15 @@
 -module(server).
--export([start/1, init/1, createServer/2]).
+-export([start/1, init/1, createServer/2, start_monitor/1, monitor_loop/1, restart/1,get_host_name/0]).
 
 start(Server) -> 
-    register(Server, spawn(fun() -> init(Server) end)).
+    register(Server, spawn(fun() -> init(Server) end)). %starts normal behaviour of the server
+
+get_host_name() ->
+    {ok, Hostname} = inet:gethostname(),
+    Hostname.
 
 init(Server) ->
-    {ok, Hostname} = inet:gethostname(),
-    Router = list_to_atom("router@" ++ Hostname),
+    Router = list_to_atom("router@" ++ get_host_name()),
     createServer(Server,Router),
     loop().
 
@@ -29,3 +32,22 @@ loop() ->
             io:format("Unknown message: ~p~n", [AnyOtherMsg]),
             loop()
     end.
+
+start_monitor(Server) ->
+    spawn(fun() -> monitor_loop(Server) end).
+
+monitor_loop(Server) ->
+    Pid = whereis(Server),
+    Ref = erlang:monitor(process, Pid),
+    receive
+        {'DOWN', Ref, process, Pid, Reason} ->
+            io:format("Server ~p is down: ~p~n", [Server, Reason]),
+            Router = list_to_atom("router@" ++ get_host_name()),
+            erpc:call(Router, router, server_down, [Pid]),
+            restart(Server),
+            monitor_loop(Server)
+    end.
+
+restart(Server) ->
+    io:format("Restarting server ~p~n", [Server]),
+    server:start(Server).

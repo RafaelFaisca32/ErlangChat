@@ -38,6 +38,11 @@ loop(ListServers) ->
             UpdatedListServers = lists:keydelete(Pid, 1, ListServers),
             io:format("Updated list of servers after removal: ~p~n", [UpdatedListServers]),
             loop(UpdatedListServers);
+        {server_down, Pid} ->
+            io:format("Server downed by Server Monitor with Pid ~p~n", [Pid]),
+            UpdatedListServers = lists:keydelete(Pid, 1, ListServers),
+            io:format("Updated list of servers after server_down request: ~p~n", [UpdatedListServers]),
+            loop(UpdatedListServers);
         {get_server, Server, From} ->
             io:format("Received request to get server ~p from ~p~n", [Server, From]),
             case find_server(Server, ListServers) of
