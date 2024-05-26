@@ -1,5 +1,5 @@
 -module(router).
--export([start/0, register_server/2, server_down/1, get_server/1, find_server/2]).
+-export([start/0, register_server/2, server_down/1, get_server/1, find_server/2, start_monitor/0]).
 
 start() ->
     register(router, spawn(fun() -> init() end)).
@@ -55,6 +55,23 @@ loop(ListServers) ->
                     loop(ListServers)
             end
     end.
+
+start_monitor() ->
+    spawn(fun() -> monitor_loop(router) end). %starts server monitor
+
+monitor_loop(Router) ->
+    Pid = whereis(Router),
+    Ref = erlang:monitor(process, Pid),
+    receive
+        {'DOWN', Ref, process, Pid, Reason} ->
+            io:format("Router ~p is down: ~p~n", [Router, Reason]),
+            restart(),
+            monitor_loop(Router)
+    end.
+
+restart() ->
+    io:format("Restarting router"),
+    router:start().
 
 find_server(_, []) ->
     false; % Server not found
