@@ -1,5 +1,5 @@
 -module(router).
--export([start/1, register_server/2, server_down/1, get_server/1, find_server/2, start_monitor/0]).
+-export([start/1, register_server/2, server_down/1, get_server/1, find_server/2, start_monitor/1]).
 
 start(UpdatedListServers) ->
     io:format("Router started with the current servers: ~p~n", [UpdatedListServers]),
@@ -59,11 +59,14 @@ loop(ListServers,RefMonitor,PidMonitor) ->
                     loop(ListServers,RefMonitor,PidMonitor)
             end;
         {'DOWN', RefMonitor, process, PidMonitor, Reason} ->
-            io:format("Router monitor is down: ~p~n", [Reason])
+            io:format("Router monitor is down: ~p~n", [Reason]),
+            restart_monitor(ListServers),
+            loop(ListServers,RefMonitor,PidMonitor)
     end.
 
-start_monitor() ->
-    register(router_monitor, spawn(fun() -> monitor_loop(router, []) end)), %starts server monitor
+start_monitor(ListServers) ->
+    io:format("Router monitor started with the current servers: ~p~n", [ListServers]),
+    register(router_monitor, spawn(fun() -> monitor_loop(router, ListServers) end)), %starts server monitor
     router ! {router_monitor_registered}.
 
 monitor_loop(Router, ListServers) ->
@@ -80,8 +83,12 @@ monitor_loop(Router, ListServers) ->
     end.
 
 restart(UpdatedListServers) ->
-    io:format("Restarting router"),
+    io:format("Restarting router~n"),
     router:start(UpdatedListServers).
+
+restart_monitor(ListServers) ->
+    io:format("Restarting router monitor~n"),
+    router:start_monitor(ListServers).
 
 find_server(_, []) ->
     false; % Server not found
