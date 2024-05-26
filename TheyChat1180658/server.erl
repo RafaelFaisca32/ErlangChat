@@ -62,10 +62,10 @@ monitor_loop(Server, ListClients) ->
     Ref = erlang:monitor(process, Pid),
     receive
         {removed_client, UpdatedList} ->
-            io:format("Lista no monitor em remove: ~p~n", [UpdatedList]),
+            io:format("Client list in the monitor: ~p~n", [UpdatedList]),
             monitor_loop(Server, UpdatedList);
         {new_client,  [Client | ListClients]} ->
-            io:format("Lista no monitor em add: ~p~n", [[Client | ListClients]]),
+            io:format("Client list in the monitor: ~p~n", [[Client | ListClients]]),
             monitor_loop(Server, [Client | ListClients]);
         {'DOWN', Ref, process, Pid, Reason} ->
             io:format("Server ~p is down: ~p~n", [Server, Reason]),

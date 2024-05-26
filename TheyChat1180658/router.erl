@@ -1,8 +1,8 @@
 -module(router).
--export([start/0, register_server/2, server_down/1, get_server/1, find_server/2, start_monitor/0]).
+-export([start/1, register_server/2, server_down/1, get_server/1, find_server/2, start_monitor/0]).
 
-start() ->
-    register(router, spawn(fun() -> init() end)).
+start(UpdatedListServers) ->
+    register(router, spawn(fun() -> loop(UpdatedListServers) end)).
 
 register_server(Server, Pid) ->
     router ! {register_server, Server, Pid}.
@@ -22,26 +22,31 @@ get_server(Server) ->
             {error, Problem}
     end.
 
-init()->
-    ListServers = [],
-    loop(ListServers).
-
 loop(ListServers) ->
     receive
         {register_server, Server, Pid} ->
             io:format("Creating server ~p with PID ~p~n", [Server, Pid]),
-            UpdatedListServers = [{Pid, Server} | ListServers],
-            io:format("Current list of servers after registration: ~p~n", [UpdatedListServers]),
-            loop(UpdatedListServers);
-        {'DOWN', _, process, Pid, _} ->
-            io:format("Server process down: ~p~n", [Pid]),
-            UpdatedListServers = lists:keydelete(Pid, 1, ListServers),
-            io:format("Updated list of servers after removal: ~p~n", [UpdatedListServers]),
-            loop(UpdatedListServers);
+            case lists:member({Pid, Server}, ListServers) of
+                true -> 
+                    io:format("Not a new server: ~p~n", [{Pid, Server}]),
+                    loop(ListServers);
+                false -> 
+                    io:format("Added a new server: ~p~n", [{Pid, Server}]),
+                    PidRouterMonitor = whereis(router_monitor),
+                    PidRouterMonitor ! {updateList,  [{Pid, Server} | ListServers]},
+                    loop([{Pid, Server} | ListServers])
+                end;
+            % UpdatedListServers = [{Pid, Server} | ListServers],
+            % io:format("Current list of servers after registration: ~p~n", [UpdatedListServers]),
+            % PidRouterMonitor = whereis(router_monitor),
+            % PidRouterMonitor ! {updateList, UpdatedListServers},
+            % loop(UpdatedListServers);
         {server_down, Pid} ->
             io:format("Server downed by Server Monitor with Pid ~p~n", [Pid]),
             UpdatedListServers = lists:keydelete(Pid, 1, ListServers),
             io:format("Updated list of servers after server_down request: ~p~n", [UpdatedListServers]),
+            PidRouterMonitor = whereis(router_monitor),
+            PidRouterMonitor ! {updateList, UpdatedListServers},
             loop(UpdatedListServers);
         {get_server, Server, From} ->
             io:format("Received request to get server ~p from ~p~n", [Server, From]),
@@ -57,21 +62,24 @@ loop(ListServers) ->
     end.
 
 start_monitor() ->
-    spawn(fun() -> monitor_loop(router) end). %starts server monitor
+    register(router_monitor, spawn(fun() -> monitor_loop(router, []) end)). %starts server monitor
 
-monitor_loop(Router) ->
+monitor_loop(Router, ListServers) ->
     Pid = whereis(Router),
     Ref = erlang:monitor(process, Pid),
     receive
         {'DOWN', Ref, process, Pid, Reason} ->
             io:format("Router ~p is down: ~p~n", [Router, Reason]),
-            restart(),
-            monitor_loop(Router)
+            restart(ListServers),
+            monitor_loop(Router, ListServers);
+        {updateList, UpdatedListServers} ->
+            io:format("Server list in the monitor: ~p~n", [UpdatedListServers]),
+            monitor_loop(Router,UpdatedListServers)
     end.
 
-restart() ->
+restart(UpdatedListServers) ->
     io:format("Restarting router"),
-    router:start().
+    router:start(UpdatedListServers).
 
 find_server(_, []) ->
     false; % Server not found
