@@ -2,6 +2,7 @@
 -export([start/1, register_server/2, server_down/1, get_server/1, find_server/2, start_monitor/0]).
 
 start(UpdatedListServers) ->
+    io:format("Server started with the current servers: ~p~n", [UpdatedListServers]),
     register(router, spawn(fun() -> loop(UpdatedListServers) end)).
 
 register_server(Server, Pid) ->

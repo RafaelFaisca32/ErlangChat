@@ -2,6 +2,7 @@
 -export([start/2, init/2, createServer/2, start_monitor/1, monitor_loop/2, restart/2,get_host_name/0]).
 
 start(Server, ListClients) -> 
+    io:format("Server started with the current clients: ~p~n", [ListClients]),
     register(Server, spawn(fun() -> init(Server, ListClients) end)). %starts normal behaviour of the server
 
 get_host_name() ->
