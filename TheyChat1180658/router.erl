@@ -36,11 +36,6 @@ loop(ListServers) ->
                     PidRouterMonitor ! {updateList,  [{Pid, Server} | ListServers]},
                     loop([{Pid, Server} | ListServers])
                 end;
-            % UpdatedListServers = [{Pid, Server} | ListServers],
-            % io:format("Current list of servers after registration: ~p~n", [UpdatedListServers]),
-            % PidRouterMonitor = whereis(router_monitor),
-            % PidRouterMonitor ! {updateList, UpdatedListServers},
-            % loop(UpdatedListServers);
         {server_down, Pid} ->
             io:format("Server downed by Server Monitor with Pid ~p~n", [Pid]),
             UpdatedListServers = lists:keydelete(Pid, 1, ListServers),

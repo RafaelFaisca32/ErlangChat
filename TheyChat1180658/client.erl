@@ -33,7 +33,9 @@ loop(Router) ->
                     io:format("Problem discovered: ~p on Server: ~p~n", [Problem, Server]),
                     loop(Router)
             end;
-        {stop_client} ->
-            io:format("Client leaving~n")
+        {Server, server_disconnect} ->
+            io:format("Client ~p leaving from Server: ~p~n",[self(),Server]);
+        {Server, _} ->
+            io:format("I'm ~p~n", [Server])
     end.
 
