@@ -84,7 +84,16 @@ monitor_loop(Router, ListServers) ->
 
 restart(UpdatedListServers) ->
     io:format("Restarting router~n"),
-    router:start(UpdatedListServers).
+    case whereis(router) of
+        undefined ->
+            io:format("Router process is not registered~n");
+        _ ->
+            ok = unregister(router),
+            io:format("Router process unregistered successfully~n")
+    end,
+    router:start(UpdatedListServers),
+    unregister(router_monitor),
+    router:start_monitor(UpdatedListServers).
 
 restart_monitor(ListServers) ->
     io:format("Restarting router monitor~n"),
