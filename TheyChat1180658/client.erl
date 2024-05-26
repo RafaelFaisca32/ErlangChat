@@ -34,8 +34,10 @@ loop(Router) ->
                     loop(Router)
             end;
         {Server, server_disconnect} ->
-            io:format("Client ~p leaving from Server: ~p~n",[self(),Server]);
+            io:format("Client ~p leaving from Server: ~p~n",[self(),Server]),
+            loop(Router);
         {Server, _} ->
-            io:format("I'm the server ~p~n", [Server])
+            io:format("I'm the server ~p~n", [Server]),
+            loop(Router)
     end.
 
